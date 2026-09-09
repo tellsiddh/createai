@@ -4,7 +4,7 @@ from openai import OpenAI
 client = OpenAI(api_key=poc_service_key, base_url=base_url)
 
 payload = {
-    "model": "gpt5.1", # https://docs.aiml.asu.edu/openai-compatible#model-format
+    "model": "gpt5.1",  # https://docs.aiml.asu.edu/openai-compatible#model-format
     "stream": False,
     "messages": [
         {"role": "system", "content": "You are a helpful assistant."},
