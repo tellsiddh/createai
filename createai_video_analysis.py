@@ -19,7 +19,7 @@ base_url = "https://api-main-poc.aiml.asu.edu/"
 project_base = "project"
 query_base = "query"
 video_file = "video_test_small.mp4"
-session_id = uuid.uuidv4()
+session_id = str(uuid.uuid4())
 db_type = "opensearch"
 
 owner_headers = {
