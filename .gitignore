@@ -220,3 +220,13 @@ __marimo__/
 
 # config
 config.py
+
+# Generated test artifacts and synthesized sample assets
+speech_output.mp3
+image_generation_output.png
+image_edit_output.png
+createai_api_speech_output.mp3
+createai_api_image_output.png
+sample_image.jpg
+sample_tone.wav
+sample_input.png

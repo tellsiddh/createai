@@ -89,6 +89,20 @@ python createai_openai_compatible_vision.py [path/to/image.png]
 Image editing only works on `gcp-deepmind` image models; the `openai` and
 `asu-air` image models drop the input image. Speech only returns mp3.
 
+Notes from live runs against the POC backend:
+
+- The vision and image-edit scripts synthesize a small real JPEG (via
+  `sample_assets.py`, needs Pillow) when no file is given, because the
+  providers reject 1-2 pixel placeholder images. Keep edit inputs under the
+  4MB decoded limit.
+- For audio transcription/translation, pass a real recording. A pure tone is
+  rejected as undecodable. The mp3 written by the speech script works well as
+  an input.
+- On POC, the OpenAI-compatible `/audio/transcriptions` and `/audio/translations`
+  routes currently return a 500 decode error for a valid file, while the native
+  `endpoint: "audio"` path (`createai_api_audio.py`) transcribes the same file
+  correctly. That is a backend/deployment issue, not a script bug.
+
 ### Native CreateAI API paths
 
 These use `requests` against `createai_base_url` with the platform's own
@@ -132,6 +146,7 @@ Available models - https://docs.aiml.asu.edu/models
 | `createai_api_speech.py` | Native CreateAI API text-to-speech (`endpoint: "speech"`). |
 | `createai_api_audio.py` | Native CreateAI API transcription (`endpoint: "audio"`). |
 | `createai_video_analysis.py` | Uploads a video to a chat session and queries it via the native API. |
-| `.gitignore` | Ignores Python build artifacts, virtual environments, caches, and local config. |
+| `sample_assets.py` | Helpers that synthesize small real sample media (image/audio) for the multimodal scripts. |
+| `.gitignore` | Ignores Python build artifacts, virtual environments, caches, local config, and generated test artifacts. |
 | `.vscode/settings.json` | VS Code workspace settings for Python environment/package manager defaults. |
 

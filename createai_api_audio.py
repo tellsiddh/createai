@@ -13,15 +13,13 @@ short tone WAV so it runs with nothing extra on disk.
 
 import base64
 import json
-import math
 import os
-import struct
 import sys
-import wave
 
 import requests
 
 from config import poc_service_key, createai_base_url
+from sample_assets import ensure_sample_wav
 
 EXTENSION_MIME = {
     "flac": "audio/flac",
@@ -34,30 +32,12 @@ EXTENSION_MIME = {
 }
 
 
-def _make_sample_wav(path: str) -> str:
-    """Write a 1-second 440Hz tone as a 16-bit mono WAV for a smoke test."""
-    framerate = 16000
-    amplitude = 16000
-    frames = bytearray()
-    for i in range(framerate):
-        sample = int(amplitude * math.sin(2 * math.pi * 440 * (i / framerate)))
-        frames += struct.pack("<h", sample)
-
-    with wave.open(path, "wb") as handle:
-        handle.setnchannels(1)
-        handle.setsampwidth(2)
-        handle.setframerate(framerate)
-        handle.writeframes(bytes(frames))
-    return path
-
-
 def _resolve_audio_file() -> str:
     if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
         return sys.argv[1]
-    sample = "sample_tone.wav"
-    if not os.path.isfile(sample):
-        _make_sample_wav(sample)
-    return sample
+    # A pure tone may be rejected as undecodable speech; for a real transcript
+    # pass a recording, or the mp3 from createai_openai_compatible_speech.py.
+    return ensure_sample_wav()
 
 
 def _data_uri(path: str) -> str:

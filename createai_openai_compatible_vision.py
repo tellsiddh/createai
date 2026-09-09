@@ -4,8 +4,8 @@ Image input on /chat/completions switches the request to CreateAI's vision
 endpoint. Images must be inlined as base64 data URLs; remote URLs are not
 fetched on the caller's behalf.
 
-Pass an image as the first CLI argument, or let the script generate a small
-solid-color PNG so it runs with nothing extra on disk.
+Pass an image as the first CLI argument, or let the script synthesize a small
+real JPEG (a red disc on white) so it runs with nothing extra on disk.
 
     python createai_openai_compatible_vision.py [path/to/image.png]
 """
@@ -16,32 +16,39 @@ import sys
 
 from config import poc_service_key, base_url
 from openai import OpenAI
+from sample_assets import ensure_sample_image
 
 client = OpenAI(api_key=poc_service_key, base_url=base_url)
 
 # A vision-capable chat model. See https://docs.aiml.asu.edu/models
 MODEL = "openai/gpt4o"
 
-# A 2x2 solid green PNG, small but a real decodable image.
-_GREEN_PNG = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR4nGNk"
-    "+M/wn4GBgYEBAA0EAwGiT9M9AAAAAElFTkSuQmCC"
-)
+_MIME_BY_EXT = {
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "gif": "image/gif",
+    "webp": "image/webp",
+}
 
 
-def _resolve_image_bytes() -> bytes:
+def _resolve_image_path() -> str:
     if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
-        with open(sys.argv[1], "rb") as handle:
-            return handle.read()
-    return _GREEN_PNG
+        return sys.argv[1]
+    return ensure_sample_image()
 
 
-def _data_uri(image_bytes: bytes, mime: str = "image/png") -> str:
-    encoded = base64.b64encode(image_bytes).decode("utf-8")
+def _data_uri(path: str) -> str:
+    extension = path.rsplit(".", 1)[-1].lower()
+    mime = _MIME_BY_EXT.get(extension, "image/jpeg")
+    with open(path, "rb") as handle:
+        encoded = base64.b64encode(handle.read()).decode("utf-8")
     return f"data:{mime};base64,{encoded}"
 
 
-data_uri = _data_uri(_resolve_image_bytes())
+image_path = _resolve_image_path()
+print(f"Image file: {image_path}")
+data_uri = _data_uri(image_path)
 
 payload = {
     "model": MODEL,

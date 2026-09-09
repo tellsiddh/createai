@@ -4,8 +4,9 @@ Maps to POST {base_url}/images/edits (multipart form data). Editing only works
 on gcp-deepmind image models; the openai/asu-air image models drop the input
 image and would return a brand new picture instead.
 
-Pass an input image as the first CLI argument, or let the script generate a
-small solid-color PNG so it runs with nothing extra on disk.
+Pass an input image as the first CLI argument, or let the script synthesize a
+small real JPEG (a red disc on white) so it runs with nothing extra on disk.
+Keep inputs well under the 4MB decoded limit the route enforces.
 
     python createai_openai_compatible_image_edit.py [path/to/image.png]
 """
@@ -16,6 +17,7 @@ import sys
 
 from config import poc_service_key, base_url
 from openai import OpenAI
+from sample_assets import ensure_sample_image
 
 client = OpenAI(api_key=poc_service_key, base_url=base_url)
 
@@ -23,21 +25,11 @@ client = OpenAI(api_key=poc_service_key, base_url=base_url)
 MODEL = "gcp-deepmind/nano_banana_pro"
 OUTPUT_FILE = "image_edit_output.png"
 
-# A 2x2 solid green PNG, small but a real decodable image.
-_GREEN_PNG = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR4nGNk"
-    "+M/wn4GBgYEBAA0EAwGiT9M9AAAAAElFTkSuQmCC"
-)
-
 
 def _resolve_image_file() -> str:
     if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
         return sys.argv[1]
-    sample = "sample_input.png"
-    if not os.path.isfile(sample):
-        with open(sample, "wb") as handle:
-            handle.write(_GREEN_PNG)
-    return sample
+    return ensure_sample_image()
 
 
 image_file = _resolve_image_file()
