@@ -1,15 +1,18 @@
-"""Helpers that produce small, real media assets for the test scripts.
+"""Helpers that locate or produce real media assets for the test scripts.
 
 The providers behind CreateAI reject synthetic 1-2 pixel images and tone-only
 audio as undecodable, so the multimodal scripts need a genuine raster image and
-a real recording to exercise the happy path. These helpers create such assets
-on demand, and cache them in the repo folder so repeated runs are cheap.
+a real recording to exercise the happy path. These helpers prefer real media
+files present in the repo folder, and fall back to synthesizing an asset only
+when none is available.
 """
 
-import math
+import glob
 import os
-import struct
-import wave
+import shutil
+import subprocess
+
+AUDIO_EXTENSIONS = (".mp3", ".wav", ".m4a", ".flac", ".ogg", ".webm")
 
 
 def ensure_sample_image(path: str = "sample_image.jpg") -> str:
@@ -38,15 +41,109 @@ def ensure_sample_image(path: str = "sample_image.jpg") -> str:
     return path
 
 
+def find_sample_audio(directory: str = ".", prefer_ext: str = ".mp3"):
+    """Return a real audio file from the folder, or None if there is none.
+
+    Prefers files with prefer_ext, and picks the smallest match so the
+    size-constrained OpenAI-compatible route (base64 inside a 6MB request)
+    has the best chance of succeeding. Synthesized helper outputs
+    (sample_tone.wav, speech_output.mp3) are skipped so a real recording wins.
+    """
+    skip = {"sample_tone.wav"}
+    candidates = []
+    for name in os.listdir(directory):
+        lower = name.lower()
+        if name in skip:
+            continue
+        if lower.endswith(AUDIO_EXTENSIONS):
+            full = os.path.join(directory, name)
+            if os.path.isfile(full):
+                candidates.append(full)
+
+    if not candidates:
+        return None
+
+    def sort_key(path):
+        is_preferred = 0 if path.lower().endswith(prefer_ext) else 1
+        return (is_preferred, os.path.getsize(path))
+
+    candidates.sort(key=sort_key)
+    return candidates[0]
+
+
+def mp3_to_wav(mp3_path: str, wav_path: str = None, sample_rate: int = 16000) -> str:
+    """Convert an mp3 (or any ffmpeg-readable audio) to a compact mono WAV.
+
+    16kHz mono PCM is what speech models expect and keeps the uncompressed WAV
+    small. Requires ffmpeg on PATH. Returns the wav path.
+    """
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError(
+            "ffmpeg is required to convert audio to WAV. Install it (e.g. "
+            "'brew install ffmpeg')."
+        )
+
+    if wav_path is None:
+        wav_path = os.path.splitext(mp3_path)[0] + ".wav"
+
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            mp3_path,
+            "-ac",
+            "1",
+            "-ar",
+            str(sample_rate),
+            wav_path,
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return wav_path
+
+
+def convert_all_mp3s(directory: str = ".", sample_rate: int = 16000):
+    """Convert every mp3 in a folder to a 16kHz mono WAV alongside it.
+
+    Skips an mp3 when its wav already exists. Returns the list of wav paths.
+    """
+    wavs = []
+    for mp3_path in sorted(glob.glob(os.path.join(directory, "*.mp3"))):
+        wav_path = os.path.splitext(mp3_path)[0] + ".wav"
+        if os.path.isfile(wav_path):
+            wavs.append(wav_path)
+            continue
+        wavs.append(mp3_to_wav(mp3_path, wav_path, sample_rate))
+    return wavs
+
+
+def ensure_sample_audio(directory: str = ".") -> str:
+    """Return a real audio file to test with.
+
+    Prefers a real recording found in the folder; only falls back to a
+    synthesized tone (which some providers reject) when nothing else exists.
+    """
+    found = find_sample_audio(directory)
+    if found:
+        return found
+    return ensure_sample_wav()
+
+
 def ensure_sample_wav(path: str = "sample_tone.wav") -> str:
     """Create a 1-second 440Hz mono WAV if it does not exist.
 
-    Note: some providers reject a pure tone as undecodable speech. For a
-    transcription happy path, pass a real recording (or the mp3 produced by
-    createai_openai_compatible_speech.py) as the first argument instead.
+    Fallback only: some providers reject a pure tone as undecodable speech.
+    Prefer a real recording via ensure_sample_audio / find_sample_audio.
     """
     if os.path.isfile(path):
         return path
+
+    import math
+    import struct
+    import wave
 
     framerate = 16000
     amplitude = 16000

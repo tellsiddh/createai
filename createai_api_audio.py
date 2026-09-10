@@ -5,8 +5,8 @@ the OpenAI-compatible /audio/transcriptions route makes upstream. The audio is
 sent inline as a base64 data URI in "audio_file"; the transcript comes back in
 the "response" field.
 
-Pass an audio file as the first CLI argument, or let the script synthesize a
-short tone WAV so it runs with nothing extra on disk.
+Pass an audio file as the first CLI argument, or let the script pick a real
+audio file from this folder (preferring the smallest .mp3).
 
     python createai_api_audio.py [path/to/audio.mp3]
 """
@@ -19,7 +19,7 @@ import sys
 import requests
 
 from config import poc_service_key, createai_base_url
-from sample_assets import ensure_sample_wav
+from sample_assets import ensure_sample_audio
 
 EXTENSION_MIME = {
     "flac": "audio/flac",
@@ -35,9 +35,7 @@ EXTENSION_MIME = {
 def _resolve_audio_file() -> str:
     if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
         return sys.argv[1]
-    # A pure tone may be rejected as undecodable speech; for a real transcript
-    # pass a recording, or the mp3 from createai_openai_compatible_speech.py.
-    return ensure_sample_wav()
+    return ensure_sample_audio()
 
 
 def _data_uri(path: str) -> str:
