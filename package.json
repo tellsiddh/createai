@@ -1,0 +1,13 @@
+{
+  "name": "createai-node-examples",
+  "version": "1.0.0",
+  "description": "Node examples for the CreateAI OpenAI-compatible API.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "streaming": "node createai_openai_compatible_api_streaming.mjs"
+  },
+  "dependencies": {
+    "openai": "^4.104.0"
+  }
+}

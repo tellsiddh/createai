@@ -227,3 +227,8 @@ config.py
 *.jpg
 *.wav
 *.mp4
+
+# Node
+node_modules/
+package-lock.json
+config.js
