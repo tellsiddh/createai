@@ -1,3 +1,4 @@
 openai==2.44.0
 requests
 pillow
+websockets
